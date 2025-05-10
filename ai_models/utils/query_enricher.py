@@ -1,4 +1,6 @@
 import re
+from ai_models.text_generation.retrievers.query_normalizer import normalize_query
+from ai_models.utils.methodes import translate_if_needed
 from ai_models.utils.specialty_detection import detect_specialty
 from ai_models.constants import SPECIALTY_MESH
 from ai_models.utils.mesh_selector import select_best_mesh
@@ -8,11 +10,14 @@ def clean_query(text: str) -> str:
     Nettoie la requête en supprimant les ponctuations non alphanumériques 
     (hors tiret et espace) et en retirant les espaces inutiles.
     """
-    return re.sub(r"[^\w\s\-]", "", text).strip()
+    translated = translate_if_needed(text)
+    normalized = normalize_query(translated)
+    return normalized
 
 def build_enriched_query(question: str) -> str:
     # Nettoyage de la question
     question_clean = clean_query(question)
+    print("\n req" ,question_clean )
 
     # Détection de la spécialité médicale
     specialty = detect_specialty(question_clean)

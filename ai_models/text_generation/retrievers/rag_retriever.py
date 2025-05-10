@@ -1,11 +1,13 @@
 import json
 import os
+from ai_models.text_generation.retrievers.query_normalizer import normalize_query
 import numpy as np
 from dotenv import load_dotenv
 import faiss
 from rank_bm25 import BM25Okapi
 from ai_models.text_generation.embedders.nomic_embedder import NomicEmbedder
 from ai_models.text_generation.retrievers.pumbed_downloader import download_pubmed
+from ai_models.utils.methodes import detect_language, translate_if_needed
 from ai_models.utils.query_enricher import build_enriched_query
 import joblib
 from typing import List, Dict
@@ -26,10 +28,14 @@ class RAGRetriever:
         self._embed = embed_cache.cache(self.embedder.embed)
         self._article_cache: Dict[str, List[Dict]] = {}
         self.index = None
-        self.cache_index_path = None  # sera défini dynamiquement
+        self.cache_index_path = None  
 
     def _slug(self, text: str) -> str:
-        return hashlib.md5(text.encode()).hexdigest()
+        translated = translate_if_needed(text)
+        print("\n translated", translated)
+        normalized = normalize_query(translated)
+        print("\n normalized" , normalized)
+        return hashlib.md5(normalized.encode()).hexdigest()
 
     def _cache_path_for_query(self, query: str) -> str:
         slug = self._slug(query)
@@ -66,7 +72,7 @@ class RAGRetriever:
         try:
             enriched_query = build_enriched_query(query)
             download_pubmed(enriched_query, max_results=max_docs)
-            slug = self._slug(enriched_query)
+            slug = hashlib.md5(enriched_query.encode()).hexdigest()
             pubmed_path = os.path.join("data", f"pubmed_articles_{slug}.json")
         except Exception as e:
             print(f"Error fetching articles: {e}")
@@ -144,7 +150,7 @@ class RAGRetriever:
             self.texts, self.metadatas = joblib.load(f)
         print(f"✅ Index chargé ({len(self.texts)} passages).")
 
-    def query(self, question: str, top_k: int = 10):
+    def query(self, question: str, top_k: int = 5):
         if self.index is None:
             self.load_index()
         query_embedding = self._embed([question])[0]
@@ -157,15 +163,25 @@ class RAGRetriever:
             meta = self.metadatas[idx]
             results.append((doc, meta))
         return results
+    def retrieve_snippets(self, query: str, top_k: int = 5) -> list[str]:
+
+        print(f"📥 Récupération de snippets pour : {query}")
+        
+        self.index_articles_from_list(query)  
+        results = self.query(query, top_k=top_k)
+        snippets = []
+
+        for doc, meta in results:
+            snippet = f"{meta['title']}\n\n{doc}"
+            snippets.append(snippet)
+
+        return snippets
+
 
 
 if __name__ == "__main__":
     rag = RAGRetriever()
-    query = "What are the common symptoms of diabetes?"
-    rag.index_articles_from_list(query=query)
-    results = rag.query(query)
+    query = "quelles sont les symptomes de diabetes ?"
+    print(rag.retrieve_snippets(" Wat is breast cancer? ??? "))
 
-    for i, (doc, meta) in enumerate(results, 1):
-        print(f"\n🔎 Résultat {i} — PMID: {meta['pmid']}")
-        print(f"Titre : {meta['title']}")
-        print(doc[:300], "...")
+
