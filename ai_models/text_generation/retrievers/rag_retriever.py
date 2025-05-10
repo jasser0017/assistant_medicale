@@ -1,5 +1,6 @@
 import json
 import os
+from ai_models.text_generation.retrievers.medical_query_corrector import QueryCorrector
 from ai_models.text_generation.retrievers.query_normalizer import normalize_query
 import numpy as np
 from dotenv import load_dotenv
@@ -23,6 +24,7 @@ embed_cache = joblib.Memory(location=EMBED_CACHE_DIR, verbose=0)
 class RAGRetriever:
     def __init__(self):
         self.embedder = NomicEmbedder()
+        self.corrector = QueryCorrector()
         self.texts: List[str] = []
         self.metadatas: List[Dict] = []
         self._embed = embed_cache.cache(self.embedder.embed)
@@ -30,11 +32,22 @@ class RAGRetriever:
         self.index = None
         self.cache_index_path = None  
 
-    def _slug(self, text: str) -> str:
-        translated = translate_if_needed(text)
-        print("\n translated", translated)
+    def _slug(self, text: str, log: bool= False) -> str:
+        try:
+            corrected = self.corrector.corriger_requete(text)
+        except Exception as e:
+            print(f"⚠️ Correction impossible, utilisation brute : {e}")
+            corrected = text
+        translated = translate_if_needed(corrected)
+       
         normalized = normalize_query(translated)
-        print("\n normalized" , normalized)
+        if log:
+            print("🧾 🔍 TRAITEMENT DE LA REQUÊTE UTILISATEUR")
+            print(f"📌 Originale    : {text}")
+            print(f"🩺 Corrigée     : {corrected}")
+            print(f"🌍 Traduite     : {translated}")
+            print(f"🧹 Normalisée   : {normalized}")
+            print("-" * 60)       
         return hashlib.md5(normalized.encode()).hexdigest()
 
     def _cache_path_for_query(self, query: str) -> str:
@@ -166,7 +179,7 @@ class RAGRetriever:
     def retrieve_snippets(self, query: str, top_k: int = 5) -> list[str]:
 
         print(f"📥 Récupération de snippets pour : {query}")
-        
+        self._slug(query, log=True)
         self.index_articles_from_list(query)  
         results = self.query(query, top_k=top_k)
         snippets = []
@@ -182,6 +195,6 @@ class RAGRetriever:
 if __name__ == "__main__":
     rag = RAGRetriever()
     query = "quelles sont les symptomes de diabetes ?"
-    print(rag.retrieve_snippets(" Wat is breast cancer? ??? "))
+    print(rag.retrieve_snippets("Existe-t-il un vaccin ? ??? "))
 
 

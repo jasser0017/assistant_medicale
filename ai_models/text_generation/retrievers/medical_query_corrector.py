@@ -69,7 +69,7 @@ if __name__ == "__main__":
     corrector = QueryCorrector()
 
   
-    requete = "The doctor have wrote a perscription for the women who had feaver?"  
+    requete = "Qu'etce que le cancer du sien? ?"  
     try:
         correction = corrector.corriger_requete(requete)
         print("🧾 Requête originale :", requete)
