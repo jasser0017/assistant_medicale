@@ -9,7 +9,7 @@ from ai_models.utils.mesh_selector import select_best_mesh
 
 corrector = QueryCorrector()
 
-def clean_query(text: str,log: bool = False) -> str:
+def clean_query(text: str) -> str:
     """
     Nettoie la requête en supprimant les ponctuations non alphanumériques 
     (hors tiret et espace) et en retirant les espaces inutiles.
@@ -20,20 +20,16 @@ def clean_query(text: str,log: bool = False) -> str:
         print(f"⚠️ Correction échouée, utilisation brute : {e}")
         corrected = text
     
-    if log:
+    
 
-        translated = translate_if_needed(corrected)
-        normalized = normalize_query(translated)
-        print(f"📌 Originale    : {text}")
-        print(f"🩺 Corrigée     : {corrected}")
-        print(f"🌍 Traduite     : {translated}")
-        print(f"🧹 Normalisée   : {normalized}")
-        print("-" * 60)
+    translated = translate_if_needed(corrected)
+    normalized = normalize_query(translated)
+
     return normalized
 
 def build_enriched_query(question: str,) -> str:
     
-    question_clean = clean_query(question,log=True)
+    question_clean = clean_query(question)
     
     
 
