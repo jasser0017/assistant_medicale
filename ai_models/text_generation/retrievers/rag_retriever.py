@@ -1,7 +1,7 @@
 import json
 import os
 from ai_models.text_generation.retrievers.medical_query_corrector import QueryCorrector
-from ai_models.text_generation.retrievers.query_normalizer import normalize_query
+from ai_models.text_generation.retrievers.query_normalizer import Normalizer
 import numpy as np
 from dotenv import load_dotenv
 import faiss
@@ -14,6 +14,7 @@ import joblib
 from typing import List, Dict
 import hashlib
 
+
 EMBED_CACHE_DIR = "data/.embed_cache"
 ARTICLE_CACHE_DIR = "data/article_cache"
 INDEX_DIR = "data/index_cache"
@@ -25,6 +26,7 @@ class RAGRetriever:
     def __init__(self):
         self.embedder = NomicEmbedder()
         self.corrector = QueryCorrector()
+        self.normalize=Normalizer()
         self.texts: List[str] = []
         self.metadatas: List[Dict] = []
         self._embed = embed_cache.cache(self.embedder.embed)
@@ -40,7 +42,7 @@ class RAGRetriever:
             corrected = text
         translated = translate_if_needed(corrected)
        
-        normalized = normalize_query(translated)
+        normalized =self.normalize.normalize_query(translated)
         if log:
             print("🧾 🔍 TRAITEMENT DE LA REQUÊTE UTILISATEUR")
             print(f"📌 Originale    : {text}")
@@ -107,6 +109,11 @@ class RAGRetriever:
         print(f"📚 Articles totaux collectés : {len(all_articles)}")
 
         abstracts = [a['abstract'].split() for a in all_articles if isinstance(a.get("abstract"), str)]
+        if not abstracts:
+            print("⚠️ Aucun article n'a été trouvé ou indexé. BM25 désactivé.")
+            self._article_cache[query] = []
+            self._save_articles_to_disk(query, [])
+            return []
 
         bm25 = BM25Okapi(abstracts)
         bm25_scores = bm25.get_scores(enriched_query.split())
@@ -142,6 +149,10 @@ class RAGRetriever:
         embeddings = self._embed(texts)
         embeddings_np = np.array(embeddings).astype("float32")
 
+        if embeddings_np.size == 0:
+            print("⚠️ Embeddings vides — indexation interrompue.")
+            return  False
+
         self.index = faiss.IndexFlatL2(embeddings_np.shape[1])
         self.index.add(embeddings_np)
 
@@ -153,6 +164,7 @@ class RAGRetriever:
         with open(meta_path, "wb") as f:
             joblib.dump((self.texts, self.metadatas), f)
         print(f"💾 FAISS index enregistré à {self.cache_index_path}")
+        return True
 
     def load_index(self):
         if not os.path.exists(self.cache_index_path):
@@ -180,8 +192,17 @@ class RAGRetriever:
 
         print(f"📥 Récupération de snippets pour : {query}")
         self._slug(query, log=True)
-        self.index_articles_from_list(query)  
-        results = self.query(query, top_k=top_k)
+        self.index_articles_from_list(query)
+        
+
+        try:
+            results = self.query(query, top_k=top_k)
+        except FileNotFoundError as e:
+            print(f"❌ Erreur : {e}")
+            return []
+        if not results:
+            print("❌ Aucun document trouvé pour cette requête.")
+            return []
         snippets = []
 
         for doc, meta in results:
@@ -195,6 +216,5 @@ class RAGRetriever:
 if __name__ == "__main__":
     rag = RAGRetriever()
     query = "quelles sont les symptomes de diabetes ?"
-    print(rag.retrieve_snippets("Existe-t-il un vaccin ? ??? "))
-
+    print(rag.retrieve_snippets("oui,j'ai mal a la ventre hier"))
 

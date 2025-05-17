@@ -1,15 +1,17 @@
 import re
 from ai_models.text_generation.retrievers.medical_query_corrector import QueryCorrector
-from ai_models.text_generation.retrievers.query_normalizer import normalize_query
+from ai_models.text_generation.retrievers.query_normalizer import Normalizer
 from ai_models.utils.methodes import translate_if_needed
 from ai_models.utils.specialty_detection import detect_specialty
 from ai_models.constants import SPECIALTY_MESH
 from ai_models.utils.mesh_selector import select_best_mesh
 
 
-corrector = QueryCorrector()
 
-def clean_query(text: str) -> str:
+corrector = QueryCorrector()
+normalize=Normalizer()
+
+def clean_query(text: str,log=False) -> str:
     """
     Nettoie la requête en supprimant les ponctuations non alphanumériques 
     (hors tiret et espace) et en retirant les espaces inutiles.
@@ -19,17 +21,24 @@ def clean_query(text: str) -> str:
     except Exception as e:
         print(f"⚠️ Correction échouée, utilisation brute : {e}")
         corrected = text
+    if log:
+        print("🧾 🔍 TRAITEMENT DE LA REQUÊTE UTILISATEUR")
+        print(f"📌 Originale    : {text}")
+        print(f"🩺 Corrigée     : {corrected}")
+        print(f"🌍 Traduite     : {translated}")
+        print(f"🧹 Normalisée   : {normalized}")
+        print("-" * 60)
     
     
 
     translated = translate_if_needed(corrected)
-    normalized = normalize_query(translated)
+    normalized =normalize.normalize_query(translated)
 
     return normalized
 
 def build_enriched_query(question: str,) -> str:
     
-    question_clean = clean_query(question)
+    question_clean = clean_query(question,log=False)
     
     
 
@@ -50,3 +59,6 @@ def build_enriched_query(question: str,) -> str:
 
     print(f"🔍 Requête enrichie : {enriched_query}")
     return enriched_query
+
+if __name__ == "__main__":
+    print(build_enriched_query("wath is the breast cancer"))
