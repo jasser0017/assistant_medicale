@@ -10,4 +10,4 @@ class ChatResponse(BaseModel):
     session_id:str
     answer: str
     history:List[Dict[str,str]]
-    #citations: List[str]
+    

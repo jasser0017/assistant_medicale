@@ -13,6 +13,12 @@ from ai_models.utils.query_enricher import build_enriched_query
 import joblib
 from typing import List, Dict
 import hashlib
+from dotenv import load_dotenv
+from groq import Groq
+import os
+load_dotenv()
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
 
 
 EMBED_CACHE_DIR = "data/.embed_cache"
@@ -26,7 +32,7 @@ class RAGRetriever:
     def __init__(self):
         self.embedder = NomicEmbedder()
         self.corrector = QueryCorrector()
-        self.normalize=Normalizer()
+        self.normalize=Normalizer(client)
         self.texts: List[str] = []
         self.metadatas: List[Dict] = []
         self._embed = embed_cache.cache(self.embedder.embed)

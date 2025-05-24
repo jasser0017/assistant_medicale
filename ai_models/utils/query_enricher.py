@@ -5,11 +5,18 @@ from ai_models.utils.methodes import translate_if_needed
 from ai_models.utils.specialty_detection import detect_specialty
 from ai_models.constants import SPECIALTY_MESH
 from ai_models.utils.mesh_selector import select_best_mesh
+from dotenv import load_dotenv
+load_dotenv()
+import os
+from groq import Groq
+
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
 
 
 
 corrector = QueryCorrector()
-normalize=Normalizer()
+normalize=Normalizer(client)
 
 def clean_query(text: str,log=False) -> str:
     """

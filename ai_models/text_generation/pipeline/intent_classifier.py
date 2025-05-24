@@ -1,17 +1,12 @@
 from groq import Groq
-from dotenv import load_dotenv
-import os
+
 
 from ai_models.utils.methodes import clean_response
 
 
-load_dotenv()
-API_KEY = os.getenv("GROQ_API_KEY")
 class IntentClassifier:
-    def __init__(self, api_key=API_KEY, model="qwen-qwq-32b"):
-        if not api_key:
-            raise ValueError("La clé API Groq n'est pas définie. Vérifie ton fichier .env.")
-        self.client = Groq(api_key=api_key)
+    def __init__(self, client, model="qwen-qwq-32b"):
+        self.client = client
         self.model = model
         
         self.labels = [
@@ -53,14 +48,17 @@ class IntentClassifier:
         )
 
         return clean_response(response.choices[0].message.content.strip())
+
+'''
 if __name__ == "__main__":
-    intent=IntentClassifier()
+    from dotenv import load_dotenv
+import os
 
-    #print("\n",  intent.classify("hello my name is jasser allela and i use Clear for men"))
-    #print("\n",  intent.classify("Fuck off"))
-    #print("\n",  intent.classify("quelles sont les symptomes de diabetes ???"))
-    #print("\n",  intent.classify("مرحباً، اسمي جاسر أليل وأستخدم Clear للرجال"))
-    #print("\n",  intent.classify("你好，我叫 Jasser Allele，我用的是 Clear 男士护理产品"))
+load_dotenv()
+API_KEY = os.getenv("GROQ_API_KEY")
+client=Groq(api_key=API_KEY)
+preprocessor=IntentClassifier( client=client,model="mistral-saba-24b")
 
-    print("\n",  intent.classify("je veux savoir des informations a propos le cancer de sein "))
-    print("\n",  intent.classify("on peut parler de football"))
+print(preprocessor.classify("j’ai très mal à la poitrine, ça me fait peur"))
+
+'''

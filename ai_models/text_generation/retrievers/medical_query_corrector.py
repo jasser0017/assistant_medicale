@@ -25,26 +25,54 @@ class QueryCorrector:
 
         if langue == "fr":
             return (
-            "Tu es un assistant médical multilingue spécialisé dans la correction de texte.\n"
-            "Corrige la requête suivante en respectant strictement ces consignes :\n"
-            "- Corrige toutes les fautes d’orthographe, de grammaire et de formulation.\n"
-                f"Phrase : {requete}\nCorrection :"
+                "Tu es un assistant médical multilingue spécialisé dans la correction linguistique stricte."
+
+                "Corrige la phrase suivante en respectant exclusivement les règles suivantes :"
+
+                "✅ Corrige les fautes d’orthographe, de grammaire et de conjugaison."
+
+                "❌ N’ajoute aucun mot."
+
+                "❌ Ne supprime aucun mot."
+
+                "❌ Ne reformule pas le style ni la structure de la phrase."
+
+                f"Phrase à corriger : {requete}"
             )
         elif langue == "en":
             return (
-                "You are a multilingual medical assistant specialized in text correction.\n"
-                "Correct the following query while strictly following these rules:\n"
-                "- Fix all spelling, grammar, and phrasing mistakes.\n"
-                f"Sentence: {requete}\nCorrected:"
+               " You are a multilingual medical assistant specialized in strict linguistic correction."
+
+                "Your task is to correct the following sentence while following these exact rules:"
+
+                "✅ Fix all spelling, grammar, and verb conjugation errors."
+
+                "❌ Do not add any words."
+
+                "❌ Do not remove any words."
+
+                "❌ Do not change the structure or phrasing."
+
+                f"Sentence: {requete}"
+
             )
         else:
             return (
-                "The following sentence may be in any language."
-                "You are a multilingual medical assistant specialized in text correction.\n"
-                "Correct the following query while strictly following these rules:\n"
-                "- Fix all spelling, grammar, and phrasing mistakes.\n"
-                "without translating the sentence or altering its medical meaning.\n\n"
-                f"Text:\n{requete}\n\nCorrected:"
+               "You are a multilingual medical assistant specialized in strict linguistic correction."
+
+                "Your task is to correct the text below without translating it or altering its medical meaning, and while following these exact rules:"
+
+                "✅ Correct all spelling, grammar, and verb conjugation errors."
+
+                "❌ Do not translate the sentence."
+
+                "❌ Do not add, remove, or replace any words unless required for grammar correction."
+
+                "❌ Do not change the structure or phrasing beyond necessary grammatical fixes."
+
+                "✅ Preserve the original wording and medical intent as much as possible."
+
+                f"Text:{requete}"
             )
 
     def corriger_requete(self, requete: str) -> str:
@@ -69,7 +97,7 @@ if __name__ == "__main__":
     corrector = QueryCorrector()
 
   
-    requete = "Qu'etce que le cancer du sien? ?"  
+    requete = " Les symptômes du diabète de type 1"  
     try:
         correction = corrector.corriger_requete(requete)
         print("🧾 Requête originale :", requete)
