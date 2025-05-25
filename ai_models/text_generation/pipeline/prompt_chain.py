@@ -1,3 +1,5 @@
+from ai_models.memory.semantic_summarizer import SemanticSummarizer
+from ai_models.memory.vector_memory import VectorMemory
 from .intent_classifier import IntentClassifier
 from .clarification import Clarifier
 from .final_generator import FinalGenerator
@@ -7,35 +9,33 @@ from groq import Groq
 models = {
     "intent": "qwen-qwq-32b",
     "clarify": "deepseek-r1-distill-llama-70b",
-    "generate": "meta-llama/llama-4-maverick-17b-128e-instruct"
+    "generate": "meta-llama/llama-4-maverick-17b-128e-instruct",
+    "summarize": "mistral-saba-24b"
 }
 
 class PromptChain:
-    def __init__(self,models: dict , memory_manager,client):
+    def __init__(self,models: dict ,client,user_profile:str = "Patient"):
         self.client =client
-        
-        self.memory_manager = memory_manager
         self.intentor   = IntentClassifier(client, models["intent"])
         self.clarifier  = Clarifier(client, models["clarify"])
         self.final_gen  = FinalGenerator(client, models["generate"])
-        self.rag        = RAGRetriever()
+        self.rag   = RAGRetriever()
+        self.semantic_summarizer = SemanticSummarizer(client, model=models["summarize"])
+        self.vector_memory = VectorMemory(summarizer=self.semantic_summarizer)
 
 
     def run(self, user_input: str,session_id: str,user_profile: str) -> str:
-        original_input = user_input
-        intent = self.intentor.classify(original_input)
-        clarification = self.clarifier.check_ambiguity(original_input, intent)
-        
-        
-        if clarification:
-            print(f"[🔁 Clarification requise] → {clarification}")
-            return clarification
+        self.vector_memory.start_session(session_id)
+       
+
+        intent = self.intentor.classify(user_input)
+     
 
         #final_intent = self.intentor.classify(original_input)
         rag_snippets = []
         special_instruction = None
 
-        if intent in { "question médicale – éducation","question médicale – prévention","question médicale – diagnostic"}and clarification is None:
+        if intent in { "question médicale – éducation","question médicale – prévention","question médicale – diagnostic"}:
             rag_snippets = self.rag.retrieve_snippets(user_input)
         elif intent == "urgence médicale":
             special_instruction = (
@@ -85,21 +85,25 @@ class PromptChain:
             )
 
         
-        memory_text = self.memory_manager.get_summary(user_profile, session_id=session_id)
+        relevant_memory = self.vector_memory.retrieve(user_input, top_k=3)
+        memory_text = ""
+        if relevant_memory:
+            memory_text += "🧠 Mémoire conversationnelle pertinente :\n" + "\n".join(relevant_memory)
 
         print(f"[INTENTION] => {intent}")
-        print(f"[CLARIFICATION] => {clarification}")
+        #print(f"[CLARIFICATION] => {clarification}")
         print(f"[RAG] => {'activé' if rag_snippets else 'non activé'}")
         print(f"[INSTRUCTION] => {special_instruction}")
         final_response = self.final_gen.generate(
             question=user_input,
-            intent=user_input,
+            intent=intent,
             clarification=None,
             rag_snippets=rag_snippets,
             memory=memory_text,
             user_profile=user_profile,
             instruction=special_instruction
         )
+        self.vector_memory.add(user_input, final_response)
         return final_response
 
 

@@ -9,28 +9,25 @@ class FinalGenerator:
         self.client = client
         self.model = model
     def generate(self,question: str,intent: str,clarification: str | None ,rag_snippets: list[str],memory: str,user_profile: str,instruction: str | None = None ) -> str:
-        
 
-        system_prompt =(
-            f"Tu es un assistant médical intelligent, empathique, multilingue, et contextuel.\n"
-    "Tu échanges avec un utilisateur dans une conversation continue, et tu dois toujours tenir compte de l’historique.\n\n"
 
-    "Voici les règles strictes que tu dois suivre :\n"
-    "1. Si un prénom est mentionné, utilise-le pour personnaliser ta réponse (ex : Bonjour Jasser).\n"
-    "2. Si un sujet médical a déjà été discuté (ex : diabète), reprends-le sans reposer les mêmes questions.\n"
-    "3. Si une clarification a déjà été obtenue (ex : type 1), **n’en demande pas une autre** inutilement.\n"
-    "4. Si l’utilisateur dit : « tous les symptômes », interprète cela comme une requête complète et donne tous les symptômes correspondants, sans relance.\n"
-    "5. Si l’utilisateur dit « tu te souviens de mon nom ? » ou « de quoi on parlait ? », réfère-toi au contexte pour répondre précisément.\n"
-    "6. Réponds toujours dans la langue de la requête de l’utilisateur.\n"
-    f"7. Adapte ton style et ton niveau selon le profil utilisateur suivant : {user_profile}.\n"
-    "8. Si la demande concerne une urgence (douleur aiguë, cancer, détresse...), reste neutre et recommande de consulter un professionnel humain."
-
+        system_prompt = (
+    "Tu es un assistant médical intelligent, empathique, multilingue et contextuel.\n"
+    "Tu échanges dans une conversation continue, et tu dois :\n\n"
+    "✅ Toujours prendre en compte les informations déjà partagées (voir la mémoire ci-dessous).\n"
+    "✅ Ne jamais reposer une question déjà posée.\n"
+    "✅ Ne pas répéter une information déjà évoquée.\n"
+    "✅ Continuer la conversation naturellement si l’utilisateur évoque une suite implicite.\n\n"
+    "🧠 Tu as accès à cette mémoire conversationnelle :\n{mémoire}\n\n"
+    "Tu dois TOUJOURS relier la question actuelle au contenu du dossier ci-dessous. Ne traite jamais la question comme indépendante."
+    "🎯 Adapte ton style et ton niveau selon ce profil : {user_profile}\n"
+    "🌍 Réponds toujours dans la même langue que celle utilisée par l’utilisateur."
+    "Si la question actuelle est implicite ou ambiguë (ex : 'et les enfants ?', 'et pour ça ?'), "
+    "tu dois utiliser la mémoire précédente pour en déduire le sujet ou la maladie évoquée."
+    "Ne traite jamais une phrase isolée comme un nouveau sujet si elle semble être une suite logique."
 
 )
-
-
-
-        
+        system_prompt = system_prompt.format(mémoire=memory,user_profile=user_profile)
 
 
         context_parts = [f"🧠 Intention détectée : {intent}"]
@@ -39,7 +36,8 @@ class FinalGenerator:
         if clarification:
             context_parts.append(f"❓ Clarification : {clarification}")
         if memory:
-            context_parts.append(f"📂 Dossier connu :\n{memory}")
+            context_parts.append("🔁 Voici le contexte conversationnel précédent à prendre en compte :\n" + memory)
+            context_parts.append( "🗨️ Voici maintenant la nouvelle question, possiblement en lien avec ce qui précède :\n" + question)
         if rag_snippets:
             context_parts.append("📚 Informations scientifiques :\n" + "\n---\n".join(rag_snippets))
 
@@ -53,7 +51,7 @@ class FinalGenerator:
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
-            max_tokens=500
+            max_tokens=300
         )
 
         return response.choices[0].message.content.strip()
